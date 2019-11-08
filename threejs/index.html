@@ -1,0 +1,63 @@
+ここにあるファイルのthree.js上の位置
+Build/three.min.js (圧縮版)
+Examples/fonts/helvetiker_regular.typeface.json
+Examples/js/controls/OrbitComtrols.js
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>ThreeJS tutorial</title>
+</head>
+<body>
+  <div id="stage"></div>
+  <script src="js/three.min.js"></script>
+  <script>
+    (function() {
+      'use strict';
+      // 処理の流れ
+      // Scene: ステージ
+      // Mesh: 物体
+      //  - geometry 形状
+      //  - material 材質
+      // Camera
+      // Renderer
+      let scene;
+      let box; // mesh
+      let camera;
+      let renderer;
+      let width = 500;
+      let height = 250;
+
+      // まずシーンを作ります。
+      scene = new THREE.Scene();
+      // 次にmeshである箱を作ります。meshは形状(geometry)と材質(material)を持ちます。
+      box = new THREE.Mesh(
+        new THREE.BoxGeometry(50, 50, 50),
+        new THREE.MeshLambertMaterial({ color: 0xff0000 })
+      );
+      box.position.set(0, 0, 0);
+      scene.add(box);
+
+      // カメラを作ります。位置と視点。画角。 タテヨコ比、写す範囲
+      camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
+      camera.position.set(200, 100, 300);
+      camera.lookAt(scene.position); // sceneのpositionって0,0,0なのかー
+      // カメラ回転させたいんだけど、どこでやるの？
+
+      // renderer
+      renderer = new THREE.WebGLRenderer({ antialiase: true });
+      renderer.setSize(width, height);
+      // 描画クリア時の色の設定
+      renderer.setClearColor(0xefefef);
+      // 解像度が高いディスプレイ向けの設定
+      renderer.setPixelRatio(window.devicePixelRatio);
+      // rendererをdiv要素にくっつける。
+      document.getElementById('stage').appendChild(renderer.domElement);
+
+      renderer.render(scene, camera);
+    })();
+  </script>
+</body>
+</html>

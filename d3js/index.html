@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <svg width="600" height="240">
+    <rect x="0" y="0" width="160" height="160" fill="skyblue"/>
+    <rect x="40" y="40" width="80" height="80" fill="tomato"/>
+  </svg>
+  <svg width="160" height="160" viewBox="0 0 320 320">
+    <rect x="0" y="0" width="160" height="160" fill="skyblue"/>
+    <rect x="40" y="40" width="80" height="80" style="fill:none;stroke:#eee;stroke-width:3;">
+  </svg>
+
+  <svg width="160" height="160">
+    <ellipse cx="80" cy="80" rx="45" ry="35" />
+    <g class="ball">
+      <circle cx="60" cy="60" r="10" fill="#eee" />
+      <circle cx="90" cy="60" r="10" fill="#eee" />
+    </g>
+    <line x1="30" y1="90" x2="90" y2="90" stroke="#eee" />
+    <polyline points="70,35 80,45, 90,35" fill="none" stroke="darkslateblue" />
+    <path d="M 65,92 A 15,10 0 0 0 95,92 Z" fill="skyblue"/>
+
+  </svg>
+  <defs>
+    <style>
+      @keyframes ball-move {
+        to {
+          transform: translateX(-3px);
+        }
+      }
+      .ball {
+        animation: ball-move 1s ease-in alternate infinite;
+      }
+    </style>
+  </defs>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script>
+    (function() {
+      'use strict';
+      const HEIGHT = 240;
+      const WIDTH = 600;
+
+      let data = [15, 20, 5];
+      let circles = d3.select('svg').selectAll('circle').data(data);
+/X-UA-Compatible
+      // update パターン　：　用語として覚えておこう。
+      function update(data) {
+        let circles = d3.select('svg').selectAll('circle').data(data);
+        // enter
+        circles 
+          .enter()
+          .append('circle')
+          .attr('cx', function(d, i) {
+            return i * 50 + 50;
+          })
+          .attr('cy', HEIGHT / 2)
+          .attr('r', function(d) {
+            return d
+          })
+          .attr('fill', 'red');
+
+        // uupdate
+        circles
+          .attr('cx', function(d, i) { return i * 50 + 50 })
+          .attr('cy', HEIGHT / 2)
+          .attr('r', function(d) {return d} )
+          .attr('fill', 'greep')
+        
+        // exit
+        circles
+          .exit()
+          .remove();
+      }
+      data = [10, 15];
+      update(data);
+      data = [10, 12, 15];
+      update(data);
+      // d3で要素のセレクトができる。セレクトしたものの中からさらにセレクトも可能。
+      // そこにdataでデータをセットできる。
+      // circles
+      //   .enter() // enter領域に入る。update領域もあるよ。update領域はデータが変更された時に別の処理をさせたり。
+      //   // 例えばdata = [別の値]とした時に
+      //   // 更新された値はupdate領域に、値が減った場合には余ったオブジェクトがexit領域に行く。
+      //   .append('circle') // append('要素名') 
+      //   .attr('cx', function(d, i) { return i * 50 + 50 }) // こう書くと、インデックスも取れる。
+      //   .attr('cy', HEIGHT + 100)
+      //   .attr('r', function(d) { return d }) // こうかくと、データの各要素がcircleに割り当てられる。
+      //   .attr('fill', 'pink')
+      //   .attr('cursor', 'pointer')
+      //   .on('click', function(d, i) { // onを仕込むこともできる。
+      //     d3.select(this)
+      //       .transition()
+      //       .attr('cy', -100)
+      //       .on('end', function() {
+      //         alert('Ball ' + i + ' is AAAA!')
+      //       })
+      //   })
+      //   .transition()
+      //     .duration(800)
+      //     .attr('cy', HEIGHT / 2)
+      //     // .delay(1000);
+      //     .delay(function(d, i) { return 200 * i })
+      //     .ease(d3.easeBounce) // D3にはeaseの仕方がかなり用意されてる。これはバウンド
+      //     // .ease(d3.easeElastic) // これはばね
+    })();
+  </script>    
+<script src="js/index.js"></script>
+</body>
+</html>
