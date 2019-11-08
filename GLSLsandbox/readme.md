@@ -1,3 +1,5 @@
+# ここのコードは↓で試す。
+# http://glslsandbox.com/
 - item1
 - item2
 
