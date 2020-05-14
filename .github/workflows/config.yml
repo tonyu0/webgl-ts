@@ -24,6 +24,7 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: '12'
+
     - name: set up git
       run: |
         git config --global user.name "tonyu0"
@@ -37,4 +38,7 @@ jobs:
     - name: build using webpack
       run: npm run build
     - name: deploy to gh-pages
+      env:
+        GH_PAT: ${{ secrets.GH_PAT }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: npm run deploy
