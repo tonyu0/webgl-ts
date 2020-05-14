@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "noImplicitAny": false, // anyがたくさん使える
         "target": "es6",
     }
 }

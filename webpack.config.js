@@ -8,8 +8,8 @@ module.exports = {
     // productionにするとoptimization.minimizerという設定が有効、圧縮されたふぁいるが出力
     mode: 'development',
     entry: path.resolve(__dirname, 'src/index.ts'),
-        // エントリの定義: モジュール間の依存関係の解析を解析する地点のこと、mainのことだね
-        // SPA(画面)が増えるたび追加
+    // エントリの定義: モジュール間の依存関係の解析を解析する地点のこと、mainのことだね
+    // SPA(画面)が増えるたび追加
     // output: {},
     module: {
         // loohaaderの設定: .tsファイルはバンドル前にts-loaderでトランスパイル？babelも必要？
@@ -22,6 +22,14 @@ module.exports = {
                     options: {},
                 }],
                 exclude: /node_modules/
+            },
+            {
+                test: /\.(vert|frag)$/,
+                exclude: /node_modules/,
+                use: [
+                    'raw-loader',
+                    'glslify-loader'
+                ]
             }
         ]
     },
