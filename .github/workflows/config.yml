@@ -27,14 +27,12 @@ jobs:
     
     - name: set up git
       run: |
-        git remote add origin https://tonyu0:grapefruit811@github.com/tonyu0/webgl-ts.git
         git config --global user.name "tonyu0"
         git config --global user.email "tonyu.grapefruit@gmail.com"
-# あとでちゃんとカギを設定しよう
-#     - name: ssh-keyscsan
-#       run: |
-#         mkdir -p ~/.ssh
-#         ssh-keyscan github.com >> ~/.ssh/known_hosts
+    - name: ssh-keyscsan
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
     - run: npm install
 #     - run: npm test
     - name: build using webpack
