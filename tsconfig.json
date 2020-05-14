@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+    }
+}
+// 意味が分かるまでは使わない
+// {
+//   "compilerOptions": {
+//     "sourceMap": true,
+//     "noImplicitAny": false,
+//     "module": "commonjs",
+//     "target": "esnext",
+//     "moduleResolution": "node",
+//     "allowJs": true,
+//     "typeRoots" : ["src/@types"],
+//     "lib": ["es2019", "dom"]
+//   }
+// }
