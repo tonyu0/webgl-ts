@@ -12,7 +12,7 @@ canvas.width = 500
 canvas.height = 500
 
 const gl = canvas.getContext('webgl') as WebGLRenderingContext
-gl.clearColor(.8, .5, 0.2, 1.0)
+gl.clearColor(0.8, 0.5, 0.2, 1.0)
 gl.clearDepth(1.0)
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 

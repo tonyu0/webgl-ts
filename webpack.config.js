@@ -2,8 +2,8 @@
 const path = require('path')
 
 module.exports = {
-    // watchモードを有効にする。ファイル監視、再ビルド？キャッシュあり。
-    watch: true,
+    // trueでwatchモードを有効にする。ファイル監視、再ビルド？キャッシュあり。
+    watch: false,
     // webpack4以降はmodeを指定しないとwebpack実行時にエラー。
     // productionにするとoptimization.minimizerという設定が有効、圧縮されたふぁいるが出力
     mode: 'development',
