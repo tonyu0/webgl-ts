@@ -24,13 +24,13 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: '12'
-    - run: npm install
-#     - run: npm test
-    - name: build using webpack
-      run: npm run build
     - name: set up git
       run: |
         git config --global user.name "tonyu0"
         git config --global user.email "tonyu.grapefruit@gmail.com"
+    - run: npm install
+#     - run: npm test
+    - name: build using webpack
+      run: npm run build
     - name: deploy to gh-pages
       run: npm run deploy
