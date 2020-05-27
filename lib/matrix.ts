@@ -4,6 +4,10 @@
 // Copyright (c) doxas
 // ------------------------------------------------------------------------------------------------
 
+// matIV
+// 行列生成: .create
+// 単位行列: .identity
+// 乗算: multiply
 function matIV(): void {
     this.create = function (): Float32Array {
         return new Float32Array(16);
