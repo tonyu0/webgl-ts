@@ -24,7 +24,6 @@ const createShader = (shaderType: ShaderType, shaderText: string): WebGLShader |
     // sourceの割り当て、shader programのロードかな？
     gl.compileShader(shader)
     // コンパイル、vertもfragも同じ関数でできる。
-    // コンパイルしたらGPUに読み込まれるんだろうか？
     return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : alert(gl.getShaderInfoLog(shader))
 }
 
@@ -100,6 +99,7 @@ const mat = new matIV()
 const mMatrix = mat.identity(mat.create())
 const vMatrix = mat.identity(mat.create())
 const pMatrix = mat.identity(mat.create())
+const vpMatrix = mat.identity(mat.create())
 const mvpMatrix = mat.identity(mat.create())
 // ビュー座標変換(カメラを動かす)
 // 原点から上に1.0, 後ろに3.0、注視点は原点、上方向はy軸
@@ -107,14 +107,21 @@ mat.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], vMatrix)
 // プロジェクション座標変換(透視投影でクリッピング)
 // 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
 mat.perspective(90, canvas.width / canvas.height, 0.1, 100, pMatrix)
-mat.multiply(pMatrix, vMatrix, mvpMatrix)
-mat.multiply(mvpMatrix, mMatrix, mvpMatrix)
+mat.multiply(pMatrix, vMatrix, vpMatrix)
 
-// uniform: 頂点シェーダーが呼ばれるタイミングで変わらない値
+mat.translate(mMatrix, [1.5, 0.0, 0.0], mMatrix)
+mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+
 // 頂点シェーダーは頂点ごとに呼ばれるので、もちろん座標は違うが、変換行列は同じ
-const uniLocation: WebGLUniformLocation = gl.getUniformLocation(program, 'mvpMatrix')
+let uniLocation: WebGLUniformLocation = gl.getUniformLocation(program, 'mvpMatrix')
 gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
-// モデルがバッファ上に描画される。
 gl.drawArrays(gl.TRIANGLES, 0, 3)
-// レンダリング結果が画面に反映される。
+
+mat.identity(mMatrix);
+mat.translate(mMatrix, [-1.5, 0.0, 0.0], mMatrix)
+mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+
+gl.uniformMatrix4fv(uniLocation, false, mvpMatrix) // uniform変数のindexに4*4行列を登録、第二引数は行列を転置するかどうか、いらない。
+gl.drawArrays(gl.TRIANGLES, 0, 3) // 三角形を、0番目の頂点から3個頂点を使い描画
+
 gl.flush()
