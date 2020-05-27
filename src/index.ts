@@ -2,19 +2,16 @@ import frag from '../shader/shader.frag'
 import vert from '../shader/shader.vert'
 import matIV from '../lib/matrix.ts'
 
+
 enum ShaderType {
     vertex,
     fragment,
 }
-
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
 canvas.width = 500
 canvas.height = 500
 
 const gl = canvas.getContext('webgl') as WebGLRenderingContext
-gl.clearColor(0.8, 0.8, 0.2, 1.0) // canvas初期化の色
-gl.clearDepth(1.0) // canvas初期化の深度
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT) // canvas初期化
 
 const createShader = (shaderType: ShaderType, shaderText: string): WebGLShader | void => {
     const glType = shaderType === ShaderType.vertex ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER
@@ -93,7 +90,6 @@ gl.bindBuffer(gl.ARRAY_BUFFER, color_vbo) // ARRAY_BUFFERってなに？
 gl.enableVertexAttribArray(attLocation[1])
 gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0)
 
-
 // DirectXだとmvp行列だけど、WebGLではかける順番が逆(列オーダーなので)
 const mat = new matIV()
 const mMatrix = mat.identity(mat.create())
@@ -108,20 +104,58 @@ mat.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], vMatrix)
 // 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
 mat.perspective(90, canvas.width / canvas.height, 0.1, 100, pMatrix)
 mat.multiply(pMatrix, vMatrix, vpMatrix)
+const uniLocation: WebGLUniformLocation = gl.getUniformLocation(program, 'mvpMatrix')
 
-mat.translate(mMatrix, [1.5, 0.0, 0.0], mMatrix)
-mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+let count = 0;
 
-// 頂点シェーダーは頂点ごとに呼ばれるので、もちろん座標は違うが、変換行列は同じ
-let uniLocation: WebGLUniformLocation = gl.getUniformLocation(program, 'mvpMatrix')
-gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
-gl.drawArrays(gl.TRIANGLES, 0, 3)
+function drawScene(): any {
+    ++count
 
-mat.identity(mMatrix);
-mat.translate(mMatrix, [-1.5, 0.0, 0.0], mMatrix)
-mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+    gl.clearColor(0.8, 0.8, 0.2, 1.0) // canvas初期化の色
+    gl.clearDepth(1.0) // canvas初期化の深度
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT) // canvas初期化
+    let rad: number = count % 360.0 * Math.PI / 180.0
+    console.log(rad)
+    let x: number = Math.cos(rad)
+    let y: number = Math.sin(rad)
+    mat.identity(mMatrix)
+    mat.translate(mMatrix, [x, y, 0.0], mMatrix)
+    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
 
-gl.uniformMatrix4fv(uniLocation, false, mvpMatrix) // uniform変数のindexに4*4行列を登録、第二引数は行列を転置するかどうか、いらない。
-gl.drawArrays(gl.TRIANGLES, 0, 3) // 三角形を、0番目の頂点から3個頂点を使い描画
+    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-gl.flush()
+    // 頂点シェーダーは頂点ごとに呼ばれるので、もちろん座標は違うが、変換行列は同じ
+    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
+
+    mat.identity(mMatrix)
+    mat.translate(mMatrix, [0.0, -1.0, 0.0], mMatrix)
+    mat.rotate(mMatrix, rad, [0.0, 1.0, 0.0], mMatrix)
+    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
+
+    let s: number = Math.sin(rad) + 1.0;
+    mat.identity(mMatrix);
+    mat.translate(mMatrix, [0.0, -3.0, 0.0], mMatrix)
+    mat.scale(mMatrix, [s, s, 0.0], mMatrix)
+    mat.rotate(mMatrix, rad * 2, [1.0, 0.0, 0.0], mMatrix)
+    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+
+    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix) // uniform変数のindexに4*4行列を登録、第二引数は行列を転置するかどうか、いらない。
+    gl.drawArrays(gl.TRIANGLES, 0, 3) // 三角形を、0番目の頂点から3個頂点を使い描画
+
+    gl.flush();
+    // (async () => {
+    //     delay(1000)
+    // })()
+    // requestAnimationFrame(drawScene())
+    setTimeout(drawScene, 1000 / 30)
+}
+
+drawScene()
+
+function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
