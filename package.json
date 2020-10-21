@@ -2,7 +2,7 @@
   "name": "webgl-ts",
   "version": "1.0.0",
   "description": "WebGL using Typescript",
-  "main": "src/index.ts",
+  "main": "src/app.ts",
   "scripts": {
     "test": "test",
     "serve": "webpack-dev-server",

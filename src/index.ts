@@ -1,15 +1,19 @@
 import frag from '../shader/shader.frag'
 import vert from '../shader/shader.vert'
-import matIV from '../lib/matrix.ts'
+import Matrix4 from '../lib/matrix.ts'
 
 
 enum ShaderType {
     vertex,
     fragment,
 }
-const canvas = document.getElementById('canvas') as HTMLCanvasElement
-canvas.width = 500
-canvas.height = 500
+// const canvas = document.getElementById('canvas') as HTMLCanvasElement
+// canvas.width = 500
+// canvas.height = 500
+
+// とりあえず場つなぎで
+let canvas = document.createElement("canvas") as HTMLCanvasElement;
+document.body.appendChild(canvas);
 
 const gl = canvas.getContext('webgl') as WebGLRenderingContext
 
@@ -91,12 +95,12 @@ gl.enableVertexAttribArray(attLocation[1])
 gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0)
 
 // DirectXだとmvp行列だけど、WebGLではかける順番が逆(列オーダーなので)
-const mat = new matIV()
-const mMatrix = mat.identity(mat.create())
-const vMatrix = mat.identity(mat.create())
-const pMatrix = mat.identity(mat.create())
-const vpMatrix = mat.identity(mat.create())
-const mvpMatrix = mat.identity(mat.create())
+const mat = new Matrix4()
+let mMatrix = Matrix4.identity()
+const vMatrix = Matrix4.identity()
+const pMatrix = Matrix4.identity()
+const vpMatrix = Matrix4.identity()
+const mvpMatrix = Matrix4.identity()
 // ビュー座標変換(カメラを動かす)
 // 原点から上に1.0, 後ろに3.0、注視点は原点、上方向はy軸
 mat.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], vMatrix)
@@ -115,10 +119,9 @@ function drawScene(): any {
     gl.clearDepth(1.0) // canvas初期化の深度
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT) // canvas初期化
     let rad: number = count % 360.0 * Math.PI / 180.0
-    console.log(rad)
     let x: number = Math.cos(rad)
     let y: number = Math.sin(rad)
-    mat.identity(mMatrix)
+    mMatrix = Matrix4.identity()
     mat.translate(mMatrix, [x, y, 0.0], mMatrix)
     mat.multiply(vpMatrix, mMatrix, mvpMatrix)
 
@@ -129,7 +132,7 @@ function drawScene(): any {
     gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
-    mat.identity(mMatrix)
+    mMatrix = Matrix4.identity()
     mat.translate(mMatrix, [0.0, -1.0, 0.0], mMatrix)
     mat.rotate(mMatrix, rad, [0.0, 1.0, 0.0], mMatrix)
     mat.multiply(vpMatrix, mMatrix, mvpMatrix)
@@ -137,7 +140,7 @@ function drawScene(): any {
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     let s: number = Math.sin(rad) + 1.0;
-    mat.identity(mMatrix);
+    mMatrix = Matrix4.identity()
     mat.translate(mMatrix, [0.0, -3.0, 0.0], mMatrix)
     mat.scale(mMatrix, [s, s, 0.0], mMatrix)
     mat.rotate(mMatrix, rad * 2, [1.0, 0.0, 0.0], mMatrix)

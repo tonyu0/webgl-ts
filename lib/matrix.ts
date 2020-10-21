@@ -1,37 +1,29 @@
-// ------------------------------------------------------------------------------------------------
-// minMatrix.js
-// version 0.0.1
-// Copyright (c) doxas
-// ------------------------------------------------------------------------------------------------
+export default class Matrix4 {
+    private _data: number[] = [];
 
-// matIV
-// 行列生成: .create
-// 単位行列: .identity
-// 乗算: multiply
-function matIV(): void {
-    this.create = function (): Float32Array {
-        return new Float32Array(16);
-    };
-    this.identity = function (dest): [] {
-        dest[0] = 1;
-        dest[1] = 0;
-        dest[2] = 0;
-        dest[3] = 0;
-        dest[4] = 0;
-        dest[5] = 1;
-        dest[6] = 0;
-        dest[7] = 0;
-        dest[8] = 0;
-        dest[9] = 0;
-        dest[10] = 1;
-        dest[11] = 0;
-        dest[12] = 0;
-        dest[13] = 0;
-        dest[14] = 0;
-        dest[15] = 1;
-        return dest;
-    };
-    this.multiply = function (mat1, mat2, dest): [] {
+    public constructor() {
+        this._data = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+    }
+
+    public get data(): number[] {
+        return this._data;
+    }
+
+    public static identity(): number[] {
+        return [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1,
+        ];
+    }
+
+    public multiply(mat1, mat2, dest): [] {
         const a = mat1[0],
             b = mat1[1],
             c = mat1[2],
@@ -82,7 +74,7 @@ function matIV(): void {
         dest[15] = M * d + N * h + O * l + P * p;
         return dest;
     };
-    this.scale = function (mat, vec, dest): [] {
+    public scale(mat, vec, dest): [] {
         dest[0] = mat[0] * vec[0];
         dest[1] = mat[1] * vec[0];
         dest[2] = mat[2] * vec[0];
@@ -101,7 +93,7 @@ function matIV(): void {
         dest[15] = mat[15];
         return dest;
     };
-    this.translate = function (mat, vec, dest): [] {
+    public translate(mat, vec, dest): [] {
         dest[0] = mat[0];
         dest[1] = mat[1];
         dest[2] = mat[2];
@@ -120,7 +112,7 @@ function matIV(): void {
         dest[15] = mat[3] * vec[0] + mat[7] * vec[1] + mat[11] * vec[2] + mat[15];
         return dest;
     };
-    this.rotate = function (mat, angle, axis, dest): [] {
+    public rotate(mat, angle, axis, dest): [] {
         let sq = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
         if (!sq) {
             return null;
@@ -182,7 +174,7 @@ function matIV(): void {
         dest[11] = j * y + n * z + r * A;
         return dest;
     };
-    this.lookAt = function (eye, center, up, dest): [] {
+    public lookAt(eye, center, up, dest): number[] {
         const eyeX = eye[0],
             eyeY = eye[1],
             eyeZ = eye[2],
@@ -193,7 +185,7 @@ function matIV(): void {
             centerY = center[1],
             centerZ = center[2];
         if (eyeX == centerX && eyeY == centerY && eyeZ == centerZ) {
-            return this.identity(dest);
+            return Matrix4.identity();
         }
         let x0, x1, x2, y0, y1, y2, z0, z1, z2, l;
         z0 = eyeX - center[0];
@@ -249,7 +241,7 @@ function matIV(): void {
         dest[15] = 1;
         return dest;
     };
-    this.perspective = function (fovy, aspect, near, far, dest): [] {
+    public perspective(fovy, aspect, near, far, dest): [] {
         const t = near * Math.tan((fovy * Math.PI) / 360);
         const r = t * aspect;
         const a = r * 2,
@@ -273,7 +265,7 @@ function matIV(): void {
         dest[15] = 0;
         return dest;
     };
-    this.transpose = function (mat, dest): [] {
+    public transpose(mat, dest): [] {
         dest[0] = mat[0];
         dest[1] = mat[4];
         dest[2] = mat[8];
@@ -292,7 +284,7 @@ function matIV(): void {
         dest[15] = mat[15];
         return dest;
     };
-    this.inverse = function (mat, dest): [] {
+    public inverse(mat, dest): [] {
         const a = mat[0],
             b = mat[1],
             c = mat[2],
@@ -341,5 +333,3 @@ function matIV(): void {
         return dest;
     };
 }
-
-export default matIV;
