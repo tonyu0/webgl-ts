@@ -2,6 +2,9 @@
     "compilerOptions": {
         "noImplicitAny": false, // anyがたくさん使える
         "target": "es6",
+        "typeRoots": [
+            "src/@types"
+        ],
     }
 }
 // 意味が分かるまでは使わない
@@ -12,8 +15,8 @@
 //     "module": "commonjs",
 //     "target": "esnext",
 //     "moduleResolution": "node",
+// "node_modules/@types",
 //     "allowJs": true,
-//     "typeRoots" : ["src/@types"],
 //     "lib": ["es2019", "dom"]
 //   }
 // }

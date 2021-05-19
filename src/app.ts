@@ -1,15 +1,13 @@
 import Engine from './engine'
 
-var engine: Engine;
-
+let engine: Engine
 
 // The main entry point of app
 window.onload = function () {
-    engine = new Engine();
-    engine.loop();
+    engine = new Engine()
+    engine.loop()
 }
 
-
 window.onresize = function () {
-    engine.resize();
-};
+    engine.resize()
+}

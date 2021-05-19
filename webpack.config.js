@@ -7,11 +7,11 @@ module.exports = {
     // webpack4以降はmodeを指定しないとwebpack実行時にエラー。
     // productionにするとoptimization.minimizerという設定が有効、圧縮されたふぁいるが出力
     mode: 'development',
-    entry: path.resolve(__dirname, 'src/index.ts'),
+    entry: path.resolve(__dirname, 'src/app.ts'),
     // SPA(画面)が増えるたび追加
     // output: {},
     module: {
-        // loohaaderの設定: .tsファイルはバンドル前にts-loaderでトランスパイル？babelも必要？
+        // .tsファイルはバンドル前にts-loaderでトランスパイル？babelも必要？
         rules: [
             {
                 // loaderの処理対象ファイル
@@ -29,6 +29,10 @@ module.exports = {
                     'raw-loader',
                     'glslify-loader'
                 ]
+            },
+            {
+                test: /\.(jpg|png)$/,
+                loaders: 'url-loader'
             }
         ]
     },
