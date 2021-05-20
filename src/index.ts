@@ -1,164 +1,387 @@
-import frag from '../shader/shader.frag'
-import vert from '../shader/shader.vert'
-import Matrix4 from '../lib/matrix.ts'
+import { gl, GLUtilities } from './gl/gl'
+import vert from '../shader/cubemap.vert'
+import frag from '../shader/cubemap.frag'
+import Matrix4 from '../lib/matrix'
+import Quaternion from '../lib/quaternion'
+import { torus, pera, sphere, cube } from '../lib/primitives'
+import {
+    ShaderType,
+    createShader,
+    createProgram,
+    createVbo,
+    setAttribute,
+    createIbo,
+    createFramebuffer,
+} from '../lib/shaderUtil'
+import png from '../assets/large.png'
+import cube_NX from '../assets/cube_NX.png'
+import cube_NY from '../assets/cube_NY.png'
+import cube_NZ from '../assets/cube_NZ.png'
+import cube_PX from '../assets/cube_PX.png'
+import cube_PY from '../assets/cube_PY.png'
+import cube_PZ from '../assets/cube_PZ.png'
+import normalMap from '../assets/normal.png'
+// 現状、onloadで出るべきところがべた書きになってり
 
-
-enum ShaderType {
-    vertex,
-    fragment,
-}
-// const canvas = document.getElementById('canvas') as HTMLCanvasElement
-// canvas.width = 500
-// canvas.height = 500
-
-// とりあえず場つなぎで
-let canvas = document.createElement("canvas") as HTMLCanvasElement;
-document.body.appendChild(canvas);
-
-const gl = canvas.getContext('webgl') as WebGLRenderingContext
-
-const createShader = (shaderType: ShaderType, shaderText: string): WebGLShader | void => {
-    const glType = shaderType === ShaderType.vertex ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER
-    const shader: WebGLShader = gl.createShader(glType)
-    // vert or fragでシェーダの受け皿を作る？
-    gl.shaderSource(shader, shaderText)
-    // sourceの割り当て、shader programのロードかな？
-    gl.compileShader(shader)
-    // コンパイル、vertもfragも同じ関数でできる。
-    return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : alert(gl.getShaderInfoLog(shader))
-}
-
-// programオブジェクト---varyingではvertからfragに値を渡すよね？それをやってくれるやつ。
-const createProgram = (vs: WebGLShader, fs: WebGLShader): WebGLProgram | void => {
-    const program: WebGLProgram = gl.createProgram()
-    gl.attachShader(program, vs)
-    gl.attachShader(program, fs)
-    gl.linkProgram(program)
-
-    // shaderのリンクが正しく行われたか✓
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return alert(gl.getProgramInfoLog(program))
-
-    // use programするとどこに何がロードされるんだろうか。
-    gl.useProgram(program)
-    return program
-}
-
-const createVbo = (data: number[]): WebGLBuffer => {
-    // バッファを操作する場合は、まずバッファをWebGLにバインドする。
-    const vbo: WebGLBuffer = gl.createBuffer()
-    // バインド
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo)
-    // バッファにデータをセット
-    // STATIC_DRAW: このバッファがどのような頻度で内容を更新されるか
-    // VBOの場合はモデルデータはそのままで何度も利用することになる。
-    // のでSTATIC_DRAW?
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW)
-    // バインド解除
-    gl.bindBuffer(gl.ARRAY_BUFFER, null)
-    return vbo
-}
-
-// 自作関数: シェーダーの生成
+const canvas: HTMLCanvasElement = GLUtilities.initialize()
+canvas.addEventListener('mousemove', mouseMove, true)
+// setting
+// これらを動的に変更するにはJS的にはどうすればいいのだろう？
+// gl.enable(gl.CULL_FACE)
+gl.enable(gl.DEPTH_TEST)
+gl.depthFunc(gl.LEQUAL)
+gl.enable(gl.STENCIL_TEST)
+// cULL: gl.CCW = face, DEPTH: gl.LEQUAL, STENCIL: WEBGLにstencil bufferを使うことを通知。コンテキスト生成時にstencilができている必要あり。
+// シェーダーの生成
 const vertShader = createShader(ShaderType.vertex, vert) as WebGLShader
 const fragShader = createShader(ShaderType.fragment, frag) as WebGLShader
-
-// 自作関数: プログラムの生成とリンク
 const program = createProgram(vertShader, fragShader) as WebGLProgram
 
-// attributeLocationの取得(シェーダー内でのattribute変数)
 const attLocation: GLint[] = [
     gl.getAttribLocation(program, 'position'),
-    gl.getAttribLocation(program, 'color')
+    gl.getAttribLocation(program, 'normal'),
+    gl.getAttribLocation(program, 'color'),
+    gl.getAttribLocation(program, 'texCoord'),
 ]
-// 頂点シェーダーにデータを渡す際のインデックスを返す
-const attStride: number[] = [3, 4] // (x, y, z), (r, g, b, a)
-const vertexPosition: number[] = [
-    0.0, 2.0, 0.0,
-    1.0, 0.0, 0.0,
-    -1.0, 0.0, 0.0
-]
-const vertexColor: number[] = [
-    1.0, 0.0, 0.0, 1.0,
-    0.0, 1.0, 0.0, 1.0,
-    0.0, 0.0, 1.0, 1.0
-]
+const attStride: number[] = [3, 3, 4, 2] // (x, y, z), (nx, ny, nz),(r, g, b, a)
+const trs = torus(60, 60, 1, 2, [1, 1, 1, 1])
+const sph = sphere(60, 60, 2.5, [1.0, 1.0, 1.0, 1.0])
+const cub = cube(2.0, [1.0, 1.0, 1.0, 1.0])
+const per = pera()
 // モデルデータ
 
-// 自作関数: VBOを生成
-const vbo: WebGLBuffer = createVbo(vertexPosition)
-gl.bindBuffer(gl.ARRAY_BUFFER, vbo) // VBOをバインド
-gl.enableVertexAttribArray(attLocation[0]) // attribute属性を有効に
-gl.vertexAttribPointer(attLocation[0], attStride[0], gl.FLOAT, false, 0, 0) // attribute属性を登録
-const color_vbo = createVbo(vertexColor)
-gl.bindBuffer(gl.ARRAY_BUFFER, color_vbo) // ARRAY_BUFFERってなに？
-gl.enableVertexAttribArray(attLocation[1])
-gl.vertexAttribPointer(attLocation[1], attStride[1], gl.FLOAT, false, 0, 0)
+// VBO/IBOを生成
+const tVbo: WebGLBuffer[] = [createVbo(trs.p), createVbo(trs.n), createVbo(trs.c), createVbo(trs.t)]
+const sVbo: WebGLBuffer[] = [createVbo(sph.p), createVbo(sph.n), createVbo(sph.c), createVbo(sph.t)]
+const cVbo: WebGLBuffer[] = [createVbo(cub.p), createVbo(cub.n), createVbo(cub.c), createVbo(cub.t)]
+const pVbo: WebGLBuffer[] = [createVbo(per.p), createVbo(per.c)]
+const tIbo: WebGLBuffer = createIbo(trs.i)
+const sIbo: WebGLBuffer = createIbo(sph.i)
+const cIbo: WebGLBuffer = createIbo(cub.i)
+const pIbo: WebGLBuffer = createIbo(per.i)
 
 // DirectXだとmvp行列だけど、WebGLではかける順番が逆(列オーダーなので)
 const mat = new Matrix4()
+const q = new Quaternion()
+const cameraRot = q.identity(q.create())
+const modelRot = q.identity(q.create())
+// 球面線形補間チェック用
+
 let mMatrix = Matrix4.identity()
 const vMatrix = Matrix4.identity()
 const pMatrix = Matrix4.identity()
-const vpMatrix = Matrix4.identity()
-const mvpMatrix = Matrix4.identity()
-// ビュー座標変換(カメラを動かす)
-// 原点から上に1.0, 後ろに3.0、注視点は原点、上方向はy軸
-mat.lookAt([0.0, 1.0, 3.0], [0, 0, 0], [0, 1, 0], vMatrix)
-// プロジェクション座標変換(透視投影でクリッピング)
-// 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
-mat.perspective(90, canvas.width / canvas.height, 0.1, 100, pMatrix)
-mat.multiply(pMatrix, vMatrix, vpMatrix)
-const uniLocation: WebGLUniformLocation = gl.getUniformLocation(program, 'mvpMatrix')
+const mvMatrix = Matrix4.identity()
+const invMatrix = Matrix4.identity()
 
-let count = 0;
+const cameraPos = [0.0, 1.0, 20.0]
+const cameraUp = [0.0, 1.0, 0.0]
+mat.lookAt(cameraPos, [0, 0, 0], cameraUp, vMatrix)
+// 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
+mat.perspective(45, canvas.width / canvas.height, 0.1, 200, pMatrix)
+
+// eyeとlightをmodel行列の逆で求めている例、eyeとlightはもともとワールドにあるから？
+// 今の理解だと、positionはローカル座標、mMatrixをかけてワールド座標、　eyeとlightはなぜか逆行列をかけて
+// invEye - posみたいにしてVを求めてるけど、わからない
+const ambientLight: number[] = [0.1, 0.1, 0.1, 1.0]
+const pointLightPosition: number[] = [0, 0, 0]
+
+const uniformList = [
+    'modelMatrix',
+    'modelViewMatrix',
+    'normalMap',
+    'cubeTexture',
+    'eta',
+    'ambientLight',
+    'projectionMatrix',
+    'pointLightPosition',
+    'reflection',
+]
+const uniformLocation: { [s: string]: WebGLUniformLocation } = {}
+
+uniformList.forEach((s) => {
+    uniformLocation[s] = gl.getUniformLocation(program, s)
+})
+
+gl.uniform4fv(uniformLocation['ambientLight'], ambientLight)
+gl.uniformMatrix4fv(uniformLocation['projectionMatrix'], false, pMatrix.data)
+gl.uniform3fv(uniformLocation['pointLightPosition'], pointLightPosition)
+
+const fb = createFramebuffer(256, 256)
+let texture0 = null,
+    texture1 = null
+// テクスチャを生成
+createTexture(normalMap, 0)
+// createTexture('https://google.github.io/filament/images/screenshot_normal_map_detail.jpg', 1)
+// 同じ物体に複数テクスチャとかしない限りは0だけでいい
+
+//////////////////// Cubemap さくせい
+// テクスチャ用の変数を用意
+let cubeTexture = null
+
+// キューブマップ用イメージのソースを配列に格納
+const cubeSourse = [cube_PX, cube_PY, cube_PZ, cube_NX, cube_NY, cube_NZ]
+
+// キューブマップ用のターゲットを格納する配列
+// それぞれのキューブマップがどこを向いているか
+const cubeTarget = [
+    gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+    gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+    gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+    gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+    gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+    gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+]
+
+// キューブマップテクスチャの生成
+create_cube_texture(cubeSourse, cubeTarget)
+/////////////////////
+
+console.log(gl.TEXTURE_2D, gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y)
+
+let count = 0
+const range = document.getElementById('alpha') as HTMLInputElement
+const type = document.getElementsByName('blend')
 
 function drawScene(): any {
     ++count
 
-    gl.clearColor(0.8, 0.8, 0.2, 1.0) // canvas初期化の色
-    gl.clearDepth(1.0) // canvas初期化の深度
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT) // canvas初期化
-    let rad: number = count % 360.0 * Math.PI / 180.0
-    let x: number = Math.cos(rad)
-    let y: number = Math.sin(rad)
-    mMatrix = Matrix4.identity()
-    mat.translate(mMatrix, [x, y, 0.0], mMatrix)
-    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+    // キャンバス初期化
+    {
+        gl.clearColor(0.3, 0.3, 0.2, 1.0) // canvas初期化の色
+        gl.clearDepth(1.0) // canvas初期化の深度
+        gl.clearStencil(0)
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT) // canvas初期化
+    }
 
-    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
-    gl.drawArrays(gl.TRIANGLES, 0, 3)
+    const rad = ((count % 360) * Math.PI) / 180
+    const rad2 = (((count + 180) % 360) * Math.PI) / 180
+    // let rad2 = (count % 720) * Math.PI / 360; これだとだめなの？
+    const x: number = Math.cos(rad)
+    const y: number = Math.sin(rad)
+    gl.uniform1f(uniformLocation['eta'], Number(range.value) / 100.0)
 
-    // 頂点シェーダーは頂点ごとに呼ばれるので、もちろん座標は違うが、変換行列は同じ
-    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
-    gl.drawArrays(gl.TRIANGLES, 0, 3)
+    // カメラ回転
+    {
+        // q.rotate(rad2, [1, 0, 0], cameraRot)
+        q.toVec3([0.0, 1.0, 20.0], cameraRot, cameraPos)
+        q.toVec3([0.0, 1.0, 0.0], cameraRot, cameraUp)
+        mat.lookAt(cameraPos, [0, 0, 0], cameraUp, vMatrix)
+    }
+    {
+        // texture
+        // cubemap用
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexture)
+        gl.uniform1i(uniformLocation['cubeTexture'], 0)
+        // normal map用
+        gl.activeTexture(gl.TEXTURE1)
+        gl.bindTexture(gl.TEXTURE_2D, texture0)
+        gl.uniform1i(uniformLocation['normalMap'], 1)
+    }
+    {
+        // 背景
+        setAttribute(cVbo, attLocation, attStride, cIbo)
+        let mMatrixIn: Matrix4 = Matrix4.identity()
+        mMatrix = Matrix4.identity()
+        mat.scale(mMatrixIn, 100, 100, 100, mMatrix)
+        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
+        gl.uniformMatrix4fv(uniformLocation['modelViewMatrix'], false, mvMatrix.data)
+        gl.uniform1i(uniformLocation['cubeTexture'], 0)
+        gl.uniform1i(uniformLocation['reflection'], 0)
+        gl.drawElements(gl.TRIANGLES, cub.i.length, gl.UNSIGNED_SHORT, 0)
+    }
 
-    mMatrix = Matrix4.identity()
-    mat.translate(mMatrix, [0.0, -1.0, 0.0], mMatrix)
-    mat.rotate(mMatrix, rad, [0.0, 1.0, 0.0], mMatrix)
-    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
-    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix)
-    gl.drawArrays(gl.TRIANGLES, 0, 3)
+    {
+        setAttribute(sVbo, attLocation, attStride, sIbo)
 
-    let s: number = Math.sin(rad) + 1.0;
-    mMatrix = Matrix4.identity()
-    mat.translate(mMatrix, [0.0, -3.0, 0.0], mMatrix)
-    mat.scale(mMatrix, [s, s, 0.0], mMatrix)
-    mat.rotate(mMatrix, rad * 2, [1.0, 0.0, 0.0], mMatrix)
-    mat.multiply(vpMatrix, mMatrix, mvpMatrix)
+        mMatrix = Matrix4.identity()
+        let tmp: Matrix4 = new Matrix4
+        mat.rotate(mMatrix, rad, [0, 0, 1], tmp)
+        mat.translate(tmp, 5, 0, 0, mMatrix)
+        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        gl.uniform1i(uniformLocation['cubeTexture'], 0)
+        gl.uniform1i(uniformLocation['reflection'], 1)
+        gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
+        gl.uniformMatrix4fv(uniformLocation['modelViewMatrix'], false, mvMatrix.data)
+        gl.drawElements(gl.TRIANGLES, sph.i.length, gl.UNSIGNED_SHORT, 0)
+    }
 
-    gl.uniformMatrix4fv(uniLocation, false, mvpMatrix) // uniform変数のindexに4*4行列を登録、第二引数は行列を転置するかどうか、いらない。
-    gl.drawArrays(gl.TRIANGLES, 0, 3) // 三角形を、0番目の頂点から3個頂点を使い描画
+    {
+        setAttribute(tVbo, attLocation, attStride, tIbo)
+        mMatrix = Matrix4.identity()
+        let tmp = new Matrix4
+        mat.rotate(mMatrix, rad2, [0, 0, 1], tmp)
+        mat.translate(tmp, 5, 0, 0, mMatrix)
+        tmp = mMatrix
+        mat.rotate(tmp, rad, [1, 0, 1], mMatrix)
+        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        gl.uniform1i(uniformLocation['cubeTexture'], 0)
+        gl.uniform1i(uniformLocation['reflection'], 1)
+        gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
+        gl.uniformMatrix4fv(uniformLocation['modelViewMatrix'], false, mvMatrix.data)
+        gl.drawElements(gl.TRIANGLES, trs.i.length, gl.UNSIGNED_SHORT, 0)
+    }
 
-    gl.flush();
-    // (async () => {
-    //     delay(1000)
-    // })()
-    // requestAnimationFrame(drawScene())
+    gl.flush()
     setTimeout(drawScene, 1000 / 30)
 }
 
 drawScene()
 
 function delay(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// 2次元座標から回転角？
+// マウスムーブイベントに登録する処理
+function mouseMove(e) {
+    const cw = canvas.width
+    const ch = canvas.height
+    const wh = 1 / Math.sqrt(cw * cw + ch * ch)
+    let x = e.clientX - canvas.offsetLeft - cw * 0.5
+    let y = e.clientY - canvas.offsetTop - ch * 0.5
+    let sq = Math.sqrt(x * x + y * y)
+    const r = sq * 2.0 * Math.PI * wh
+    if (sq != 1) {
+        sq = 1 / sq
+        x *= sq
+        y *= sq
+    }
+    q.rotate(r, [y, x, 0.0], cameraRot)
+}
+
+// テクスチャを生成する関数
+function createTexture(source, num) {
+    // イメージオブジェクトの生成
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    // データのオンロードをトリガーにする
+    img.onload = function () {
+        // テクスチャオブジェクトの生成
+        const tex = gl.createTexture()
+
+        // テクスチャをバインドする
+        gl.bindTexture(gl.TEXTURE_2D, tex)
+
+        // テクスチャへイメージを適用
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
+
+        // ミップマップを生成
+        gl.generateMipmap(gl.TEXTURE_2D)
+
+        // テクスチャパラメータの設定
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+
+        // テクスチャのバインドを無効化
+        gl.bindTexture(gl.TEXTURE_2D, null)
+        switch (num) {
+            case 0:
+                texture0 = tex
+            case 1:
+                texture1 = tex
+            default:
+                break
+        }
+    }
+
+    // イメージオブジェクトのソースを指定
+    img.src = source
+}
+
+// ブレンドタイプを設定する関数
+function blendType(prm) {
+    switch (prm) {
+        // 透過処理
+        case 0:
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE)
+            break
+        // 加算合成
+        case 1:
+            // gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+            gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE)
+            break
+        default:
+            break
+    }
+}
+
+// キューブマップテクスチャを生成する関数
+function create_cube_texture(source, target) {
+    // インスタンス用の配列
+    const cImg = []
+
+    for (let i = 0; i < source.length; i++) {
+        // インスタンスの生成
+        cImg[i] = new cubeMapImage()
+
+        // イメージオブジェクトのソースを指定
+        cImg[i].data.src = source[i]
+    }
+
+    // キューブマップ用イメージのコンストラクタ
+    function cubeMapImage() {
+        // イメージオブジェクトを格納
+        this.data = new Image()
+
+        // イメージロードをトリガーにする
+        this.data.onload = function () {
+            // プロパティを真にする
+            this.imageDataLoaded = true
+
+            // チェック関数を呼び出す
+            checkLoaded()
+        }
+    }
+
+    // イメージロード済みかチェックする関数
+    function checkLoaded() {
+        // 全てロード済みならキューブマップを生成する関数を呼び出す
+        if (
+            cImg[0].data.imageDataLoaded &&
+            cImg[1].data.imageDataLoaded &&
+            cImg[2].data.imageDataLoaded &&
+            cImg[3].data.imageDataLoaded &&
+            cImg[4].data.imageDataLoaded &&
+            cImg[5].data.imageDataLoaded
+        ) {
+            generateCubeMap()
+        }
+    }
+
+    // キューブマップを生成する関数
+    function generateCubeMap() {
+        // テクスチャオブジェクトの生成
+        const tex = gl.createTexture()
+
+        // テクスチャをキューブマップとしてバインドする
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex)
+
+        // ソースを順に処理する
+        for (let j = 0; j < source.length; j++) {
+            // テクスチャへイメージを適用
+            gl.texImage2D(target[j], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cImg[j].data)
+        }
+
+        // ミップマップを生成
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
+
+        // テクスチャパラメータの設定
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+
+        // キューブマップテクスチャを変数に代入
+        cubeTexture = tex
+
+        // テクスチャのバインドを無効化
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, null)
+    }
 }
