@@ -1,8 +1,8 @@
+import * as lodash from 'lodash'
 import { gl, GLUtilities } from './gl/gl'
 import vert from '../shader/cubemap.vert'
 import frag from '../shader/cubemap.frag'
-import Matrix4 from '../lib/matrix'
-import Quaternion from '../lib/quaternion'
+import { Mat4, Quaternion } from '../lib/math'
 import { torus, pera, sphere, cube } from '../lib/primitives'
 import {
     ShaderType,
@@ -61,23 +61,21 @@ const cIbo: WebGLBuffer = createIbo(cub.i)
 const pIbo: WebGLBuffer = createIbo(per.i)
 
 // DirectXだとmvp行列だけど、WebGLではかける順番が逆(列オーダーなので)
-const mat = new Matrix4()
+const mat = new Mat4()
 const q = new Quaternion()
-const cameraRot = q.identity(q.create())
-const modelRot = q.identity(q.create())
+const cameraRot: Quaternion = Quaternion.identity()
+const modelRot: Quaternion = Quaternion.identity()
 // 球面線形補間チェック用
 
-let mMatrix = Matrix4.identity()
-const vMatrix = Matrix4.identity()
-const pMatrix = Matrix4.identity()
-const mvMatrix = Matrix4.identity()
-const invMatrix = Matrix4.identity()
+let mMatrix = Mat4.identity()
+let vMatrix = Mat4.identity()
+const pMatrix = Mat4.createPerspective(45, canvas.width, canvas.height, 0.1, 200)
+let mvMatrix = Mat4.identity()
 
 const cameraPos = [0.0, 1.0, 20.0]
 const cameraUp = [0.0, 1.0, 0.0]
 mat.lookAt(cameraPos, [0, 0, 0], cameraUp, vMatrix)
 // 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
-mat.perspective(45, canvas.width / canvas.height, 0.1, 200, pMatrix)
 
 // eyeとlightをmodel行列の逆で求めている例、eyeとlightはもともとワールドにあるから？
 // 今の理解だと、positionはローカル座標、mMatrixをかけてワールド座標、　eyeとlightはなぜか逆行列をかけて
@@ -144,7 +142,6 @@ const type = document.getElementsByName('blend')
 
 function drawScene(): any {
     ++count
-
     // キャンバス初期化
     {
         gl.clearColor(0.3, 0.3, 0.2, 1.0) // canvas初期化の色
@@ -181,10 +178,10 @@ function drawScene(): any {
     {
         // 背景
         setAttribute(cVbo, attLocation, attStride, cIbo)
-        let mMatrixIn: Matrix4 = Matrix4.identity()
-        mMatrix = Matrix4.identity()
-        mat.scale(mMatrixIn, 100, 100, 100, mMatrix)
-        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        mMatrix = Mat4.identity()
+        mMatrix.scale(100, 100, 100)
+        mvMatrix = lodash.cloneDeep(vMatrix)
+        mvMatrix.multiply(mMatrix)
         gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
         gl.uniformMatrix4fv(uniformLocation['modelViewMatrix'], false, mvMatrix.data)
         gl.uniform1i(uniformLocation['cubeTexture'], 0)
@@ -195,11 +192,11 @@ function drawScene(): any {
     {
         setAttribute(sVbo, attLocation, attStride, sIbo)
 
-        mMatrix = Matrix4.identity()
-        let tmp: Matrix4 = new Matrix4
-        mat.rotate(mMatrix, rad, [0, 0, 1], tmp)
-        mat.translate(tmp, 5, 0, 0, mMatrix)
-        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        mMatrix = Mat4.identity()
+        mMatrix.rotate(rad, [0, 0, 1])
+        mMatrix.translate(5, 0, 0)
+        mvMatrix = lodash.cloneDeep(vMatrix)
+        mvMatrix.multiply(mMatrix)
         gl.uniform1i(uniformLocation['cubeTexture'], 0)
         gl.uniform1i(uniformLocation['reflection'], 1)
         gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
@@ -209,13 +206,12 @@ function drawScene(): any {
 
     {
         setAttribute(tVbo, attLocation, attStride, tIbo)
-        mMatrix = Matrix4.identity()
-        let tmp = new Matrix4
-        mat.rotate(mMatrix, rad2, [0, 0, 1], tmp)
-        mat.translate(tmp, 5, 0, 0, mMatrix)
-        tmp = mMatrix
-        mat.rotate(tmp, rad, [1, 0, 1], mMatrix)
-        mat.multiply(vMatrix, mMatrix, mvMatrix)
+        mMatrix = Mat4.identity()
+        mMatrix.rotate(rad2, [0, 0, 1])
+        mMatrix.translate(5, 0, 0)
+        mMatrix.rotate(rad, [1, 0, 1])
+        mvMatrix = lodash.cloneDeep(vMatrix)
+        mvMatrix.multiply(mMatrix)
         gl.uniform1i(uniformLocation['cubeTexture'], 0)
         gl.uniform1i(uniformLocation['reflection'], 1)
         gl.uniformMatrix4fv(uniformLocation['modelMatrix'], false, mMatrix.data)
@@ -248,7 +244,7 @@ function mouseMove(e) {
         x *= sq
         y *= sq
     }
-    q.rotate(r, [y, x, 0.0], cameraRot)
+    cameraRot.makeQuaternionFromAxis(r, [y, x, 0.0])
 }
 
 // テクスチャを生成する関数

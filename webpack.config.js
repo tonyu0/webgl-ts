@@ -7,7 +7,7 @@ module.exports = {
     // webpack4以降はmodeを指定しないとwebpack実行時にエラー。
     // productionにするとoptimization.minimizerという設定が有効、圧縮されたふぁいるが出力
     mode: 'development',
-    entry: path.resolve(__dirname, 'src/app.ts'),
+    entry: path.resolve(__dirname, 'src/index.ts'),
     // SPA(画面)が増えるたび追加
     // output: {},
     module: {
