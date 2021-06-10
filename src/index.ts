@@ -2,7 +2,7 @@ import * as lodash from 'lodash'
 import { gl, GLUtilities } from './gl/gl'
 import vert from '../shader/cubemap.vert'
 import frag from '../shader/cubemap.frag'
-import { Mat4, Quaternion } from '../lib/math'
+import { Mat4, Quaternion, Vec3 } from '../lib/math'
 import { torus, pera, sphere, cube } from '../lib/primitives'
 import {
     ShaderType,
@@ -13,7 +13,6 @@ import {
     createIbo,
     createFramebuffer,
 } from '../lib/shaderUtil'
-import png from '../assets/large.png'
 import cube_NX from '../assets/cube_NX.png'
 import cube_NY from '../assets/cube_NY.png'
 import cube_NZ from '../assets/cube_NZ.png'
@@ -67,14 +66,14 @@ const cameraRot: Quaternion = Quaternion.identity()
 const modelRot: Quaternion = Quaternion.identity()
 // 球面線形補間チェック用
 
+const cameraPos = new Vec3(0.0, 1.0, 20.0)
+const cameraUp = new Vec3(0.0, 1.0, 0.0)
+const center = new Vec3(0.0, 0.0, 0.0)
 let mMatrix = Mat4.identity()
-let vMatrix = Mat4.identity()
+let vMatrix = Mat4.lookAt(cameraPos, center, cameraUp)
 const pMatrix = Mat4.createPerspective(45, canvas.width, canvas.height, 0.1, 200)
 let mvMatrix = Mat4.identity()
 
-const cameraPos = [0.0, 1.0, 20.0]
-const cameraUp = [0.0, 1.0, 0.0]
-mat.lookAt(cameraPos, [0, 0, 0], cameraUp, vMatrix)
 // 視野角90度、アス比はcanvasサイズ、ニアクリップ、ファークリップ
 
 // eyeとlightをmodel行列の逆で求めている例、eyeとlightはもともとワールドにあるから？
@@ -134,6 +133,7 @@ const cubeTarget = [
 create_cube_texture(cubeSourse, cubeTarget)
 /////////////////////
 
+console.log(gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)) // 32でた
 console.log(gl.TEXTURE_2D, gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y)
 
 let count = 0
@@ -162,7 +162,7 @@ function drawScene(): any {
         // q.rotate(rad2, [1, 0, 0], cameraRot)
         q.toVec3([0.0, 1.0, 20.0], cameraRot, cameraPos)
         q.toVec3([0.0, 1.0, 0.0], cameraRot, cameraUp)
-        mat.lookAt(cameraPos, [0, 0, 0], cameraUp, vMatrix)
+        vMatrix = Mat4.lookAt(cameraPos, center, cameraUp)
     }
     {
         // texture
@@ -193,7 +193,7 @@ function drawScene(): any {
         setAttribute(sVbo, attLocation, attStride, sIbo)
 
         mMatrix = Mat4.identity()
-        mMatrix.rotate(rad, [0, 0, 1])
+        mMatrix.rotate(rad, new Vec3(0, 0, 1))
         mMatrix.translate(5, 0, 0)
         mvMatrix = lodash.cloneDeep(vMatrix)
         mvMatrix.multiply(mMatrix)
@@ -207,9 +207,9 @@ function drawScene(): any {
     {
         setAttribute(tVbo, attLocation, attStride, tIbo)
         mMatrix = Mat4.identity()
-        mMatrix.rotate(rad2, [0, 0, 1])
+        mMatrix.rotate(rad2, new Vec3(0, 0, 1))
         mMatrix.translate(5, 0, 0)
-        mMatrix.rotate(rad, [1, 0, 1])
+        mMatrix.rotate(rad, new Vec3(1, 0, 1))
         mvMatrix = lodash.cloneDeep(vMatrix)
         mvMatrix.multiply(mMatrix)
         gl.uniform1i(uniformLocation['cubeTexture'], 0)
@@ -244,7 +244,7 @@ function mouseMove(e) {
         x *= sq
         y *= sq
     }
-    cameraRot.makeQuaternionFromAxis(r, [y, x, 0.0])
+    cameraRot.makeQuaternionFromAxis(r, new Vec3(y, x, 0.0))
 }
 
 // テクスチャを生成する関数

@@ -1,5 +1,42 @@
 export class Vec3 {
+    public x: number
+    public y: number
+    public z: number
+    public len: number
+    constructor(_x: number, _y: number, _z: number) {
+        this.x = _x
+        this.y = _y
+        this.z = _z
+    }
+    public normalize(): void {
+        if (this.len == 1) { return }
+        this.len = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
+        this.x /= this.len
+        this.y /= this.len
+        this.z /= this.len
+    }
+    public plus(rhs: Vec3): Vec3 {
+        let x = this.x + rhs.x
+        let y = this.y + rhs.y
+        let z = this.z + rhs.z
+        return new Vec3(x, y, z)
+    }
+    public minus(rhs: Vec3): Vec3 {
+        let x = this.x - rhs.x
+        let y = this.y - rhs.y
+        let z = this.z - rhs.z
+        return new Vec3(x, y, z)
+    }
 
+    public dot(rhs: Vec3): number {
+        return this.x * rhs.x + this.y * rhs.y + this.z * rhs.z
+    }
+    public cross(rhs: Vec3): Vec3 {
+        let x = this.y * rhs.z - this.z * rhs.y
+        let y = this.z * rhs.x - this.x * rhs.z
+        let z = this.x * rhs.y - this.y * rhs.x
+        return new Vec3(x, y, z)
+    }
 }
 
 export class Mat4 {
@@ -38,8 +75,7 @@ export class Mat4 {
         ]);
     }
 
-    // src1 *= src2という感じに
-    // 現状srcとdstが同じだと壊れる
+    // operation like src1 *= src2
     public multiply(rhs: Mat4): void {
         // dst = src2 * src1
         // init dst data
@@ -73,79 +109,30 @@ export class Mat4 {
     };
 
     // make quaternion and toMat4
-    public rotate(angle: number, axis: number[]): void {
+    public rotate(angle: number, axis: Vec3): void {
         let quaternion: Quaternion = new Quaternion;
         quaternion.makeQuaternionFromAxis(angle, axis)
         let rotmat = quaternion.toMat4()
         this.multiply(rotmat)
     };
-    public lookAt(eye: number[], center: number[], up: number[], dst: Mat4): Mat4 {
-        const eyeX = eye[0],
-            eyeY = eye[1],
-            eyeZ = eye[2],
-            upX = up[0],
-            upY = up[1],
-            upZ = up[2],
-            centerX = center[0],
-            centerY = center[1],
-            centerZ = center[2];
-        if (eyeX == centerX && eyeY == centerY && eyeZ == centerZ) {
-            return Mat4.identity();
-        }
-        let x0, x1, x2, y0, y1, y2, z0, z1, z2, l;
-        z0 = eyeX - center[0];
-        z1 = eyeY - center[1];
-        z2 = eyeZ - center[2];
-        l = 1 / Math.sqrt(z0 * z0 + z1 * z1 + z2 * z2);
-        z0 *= l;
-        z1 *= l;
-        z2 *= l;
-        x0 = upY * z2 - upZ * z1;
-        x1 = upZ * z0 - upX * z2;
-        x2 = upX * z1 - upY * z0;
-        l = Math.sqrt(x0 * x0 + x1 * x1 + x2 * x2);
-        if (!l) {
-            x0 = 0;
-            x1 = 0;
-            x2 = 0;
-        } else {
-            l = 1 / l;
-            x0 *= l;
-            x1 *= l;
-            x2 *= l;
-        }
-        y0 = z1 * x2 - z2 * x1;
-        y1 = z2 * x0 - z0 * x2;
-        y2 = z0 * x1 - z1 * x0;
-        l = Math.sqrt(y0 * y0 + y1 * y1 + y2 * y2);
-        if (!l) {
-            y0 = 0;
-            y1 = 0;
-            y2 = 0;
-        } else {
-            l = 1 / l;
-            y0 *= l;
-            y1 *= l;
-            y2 *= l;
-        }
-        dst.data[0] = x0;
-        dst.data[1] = y0;
-        dst.data[2] = z0;
-        dst.data[3] = 0;
-        dst.data[4] = x1;
-        dst.data[5] = y1;
-        dst.data[6] = z1;
-        dst.data[7] = 0;
-        dst.data[8] = x2;
-        dst.data[9] = y2;
-        dst.data[10] = z2;
-        dst.data[11] = 0;
-        dst.data[12] = -(x0 * eyeX + x1 * eyeY + x2 * eyeZ);
-        dst.data[13] = -(y0 * eyeX + y1 * eyeY + y2 * eyeZ);
-        dst.data[14] = -(z0 * eyeX + z1 * eyeY + z2 * eyeZ);
-        dst.data[15] = 1;
-        return dst;
-    };
+    public static lookAt(eye: Vec3, target: Vec3, up: Vec3): Mat4 {
+        // カメラの座標変換行列の逆行列
+        let k = eye.minus(target) // 逆?
+        k.normalize()
+        let i = up.cross(k)
+        i.normalize()
+        let j = k.cross(i)
+        j.normalize()
+        let t = new Vec3(-i.dot(eye), -j.dot(eye), -k.dot(eye))
+        return new Mat4(
+            [
+                i.x, j.x, k.x, 0,
+                i.y, j.y, k.y, 0,
+                i.z, j.z, k.z, 0,
+                t.x, t.y, t.z, 1
+            ]
+        )
+    }
     // not affine
     public static createPerspective(fovy: number, width: number, height: number, near: number, far: number): Mat4 {
         const t = near * Math.tan((fovy * Math.PI) / 360);
@@ -175,23 +162,23 @@ export class Mat4 {
             }
         }
     };
-    public inverse(src: Mat4, dst: Mat4): void {
-        const a = src.data[0],
-            b = src.data[1],
-            c = src.data[2],
-            d = src.data[3],
-            e = src.data[4],
-            f = src.data[5],
-            g = src.data[6],
-            h = src.data[7],
-            i = src.data[8],
-            j = src.data[9],
-            k = src.data[10],
-            l = src.data[11],
-            m = src.data[12],
-            n = src.data[13],
-            o = src.data[14],
-            p = src.data[15],
+    public inverse(dst: Mat4): void {
+        const a = this.data[0],
+            b = this.data[1],
+            c = this.data[2],
+            d = this.data[3],
+            e = this.data[4],
+            f = this.data[5],
+            g = this.data[6],
+            h = this.data[7],
+            i = this.data[8],
+            j = this.data[9],
+            k = this.data[10],
+            l = this.data[11],
+            m = this.data[12],
+            n = this.data[13],
+            o = this.data[14],
+            p = this.data[15],
             q = a * f - b * e,
             r = a * g - c * e,
             s = a * h - d * e,
@@ -251,18 +238,13 @@ export class Quaternion {
         return new Quaternion(0, 0, 0, 1)
     }
     // Get rotate Quaternion
-    // Axis needs to be normalized
-    public makeQuaternionFromAxis(angle: number, axis: number[]): void {
-        let length = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2])
-        if (length == 0) { return }
-        axis[0] /= length
-        axis[1] /= length
-        axis[2] /= length
+    public makeQuaternionFromAxis(angle: number, axis: Vec3): void {
+        axis.normalize()
 
         let scalar: number = Math.sin(angle / 2.0)
-        this.x = axis[0] * scalar
-        this.y = axis[1] * scalar
-        this.z = axis[2] * scalar
+        this.x = axis.x * scalar
+        this.y = axis.y * scalar
+        this.z = axis.z * scalar
         this.w = Math.cos(angle / 2.0)
     }
 
@@ -289,7 +271,7 @@ export class Quaternion {
     }
 
     // convert vec using quaternion
-    public toVec3(vec: number[], qtn: Quaternion, dst: number[]): void {
+    public toVec3(vec: number[], qtn: Quaternion, dst: Vec3): void {
         let qp: Quaternion = new Quaternion
         let qr: Quaternion = new Quaternion(qtn.x, qtn.y, qtn.z, 1)
         qr.conjugate()
@@ -298,9 +280,9 @@ export class Quaternion {
         qp.z = vec[2]
         qr.multiply(qp)
         qr.multiply(qtn)
-        dst[0] = qr.x
-        dst[1] = qr.y
-        dst[2] = qr.z
+        dst.x = qr.x
+        dst.y = qr.y
+        dst.z = qr.z
     }
     public toMat4(): Mat4 {
         let x = this.x, y = this.y, z = this.z, w = this.w;

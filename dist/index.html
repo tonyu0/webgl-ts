@@ -1,33 +1,38 @@
 <!DOCTYPE html>
 <html lang="ja">
+    <head>
+        <meta charset="utf-8" />
+        <title>WebGL Tutorial With TypeScript</title>
+        <!-- <style type="text/css">
+        </style> -->
+        <link rel="stylesheet" type="text/css" href="style.css" />
+    </head>
 
-<head>
-  <meta charset="utf-8" />
-  <title>WebGL Tutorial With TypeScript</title>
-  <style type="text/css">
-    html,
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-
-    canvas {
-      width: 50%;
-      height: 50%;
-    }
-  </style>
-</head>
-
-<body>
-  <p>
-    <input id="alpha" type="range" min="0" max="100" value="70" /> vertex alpha
-  </p>
-  <p>
-    <input id="transparency" type="radio" name="blend" checked> transparency
-    <input id="add" type="radio" name="blend"> add
-  </p>
-
-  <script type="text/javascript" src="main.js"></script>
-</body>
-
+    <body>
+        <div id="main">
+            <header>WebGL with Typescript playground</header>
+            <aside id="index">
+                <section>
+                    <h1>Shader Menu</h1>
+                    <dl>
+                        <dd><a href="main" title="main">Main page</a></dd>
+                        <dd><a href="app" title="app">Game Engine App (under construction)</a></dd>
+                        <dd><a href="page0" title="page0">Page 0</a></dd>
+                        <dd><a href="page1" title="page1">Page 1</a></dd>
+                        <dd><a href="glsl" title="glsl">Hanabi</a></dd>
+                    </dl>
+                </section>
+            </aside>
+            <div id="content">
+                <p><input id="alpha" type="range" min="0" max="100" value="70" /> vertex alpha</p>
+                <p>
+                    <input id="transparency" type="radio" name="blend" checked /> transparency
+                    <input id="add" type="radio" name="blend" /> add
+                </p>
+                <!-- here add script for selected feature -->
+            </div>
+            <footer><a href="https://github.com/tonyu0/webgl-ts">Source on GitHub</a></footer>
+        </div>
+        <script type="text/javascript" src="router.js"></script>
+    </body>
 </html>

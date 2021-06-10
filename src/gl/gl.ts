@@ -9,7 +9,9 @@ export class GLUtilities {
      */
     public static initialize(): HTMLCanvasElement {
         const canvas = document.createElement('canvas') as HTMLCanvasElement
-        document.body.appendChild(canvas)
+        let content = document.getElementById('content') as HTMLBodyElement
+        content.appendChild(canvas)
+        // document.body.appendChild(canvas)
 
         gl = canvas.getContext('webgl', { stencil: true })
         if (gl === undefined) {

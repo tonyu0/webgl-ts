@@ -1,2 +1,98 @@
 https://wgld.org/d/webgl/w089.html
 全89項　勉強したシェーダーを変えながら
+
+
+オプションが多いのでここにまとめて選択肢をわかりやすくする。
+あとで別の手段でもっとみやすく
+
+＊テクスチャパラメーター
+gl.texParameteroはその時点でバインドされているテクスチャに対して適用される。
+基本形:
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+・品質
+ニアレストネイバーとか線形補間とか。NNの方が速い。
+テクスチャが拡大される時の補完方法:gl.TEXTURE_MAG_FILTER
+縮小されるときの補間方法: gl.TEXTURE_MIN_FILTER
+
+・性質
+範囲外の繰り返し設定とか。
+WRAP_SとWRAP_Tが存在。
+これによる表現テクとかあるらしい。
+gl.REPEAT
+gl.MIRRORED_REPEAT
+gl.CLAMP_TO_EDGE
+
+
+＊アルファブレンドファクター
+gl.ZERO, gl.ONE, gl.ONE_MINUS_SRC_ALPHAしか使わなくない？
+
+
+blendFuncSeparate メソッド
+第一引数：描画元(SRC)のカラー値に対するブレンドファクター
+
+第二引数：描画先(DST)のカラー値に対するブレンドファクター
+
+第三引数：描画元(SRC)のアルファ値に対するブレンドファクター
+
+第四引数：描画先(DST)のアルファ値に対するブレンドファクター
+
+アルファブレンディングを行なう際の記述例：
+
+gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE);
+
+＊アルファブレンドファクター
+blendEquation メソッドに指定できる組み込み定数
+gl.FUNC_ADD：描画元 + 描画先
+gl.FUNC_SUBTRACT：描画元 - 描画先
+gl.FUNC_REVERSE_SUBTRACT：描画先 - 描画元
+
+
+＊点のレンダリングをする際の大きさはハードによりことなる。
+// 点の最大ピクセル数をコンソールに出力
+var pointSizeRange = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
+console.log('pointSizeRange:' + pointSizeRange[0] + ' to ' + pointSizeRange[1]);
+// pointSizeRange:1 to 1024 (うちの)
+
+
+＊ステンシルバッファ（デプスバッファはないのか？）
+基本形: gl.stencilFunc(gl.ALWAYS, ref, mask); refは実際の値？
+gl.ALWAYS	常にステンシルテストを通過する
+gl.NEVER	常にステンシルテストを通過しない
+gl.LESS	[ ref & mask ] < [ pixel & mask ] のとき通過する
+gl.LEQUAL	[ ref & mask ] <= [ pixel & mask ] のとき通過する
+gl.EQUAL	[ ref & mask ] == [ pixel & mask ] のとき通過する
+gl.NOTEQUAL	[ ref & mask ] != [ pixel & mask ] のとき通過する
+gl.GREATER	[ ref & mask ] > [ pixel & mask ] のとき通過する
+gl.GEQUAL	[ ref & mask ] >= [ pixel & mask ] のとき通過する
+
+＊ステンシルバッファへの書き込み
+基本形: gl.stencilOp(fail, zfail, zpass); 
+// stencil -> depth testってイメージ？depthだけ通貨ってないんだろうか。いや、ステンシルが不合格なら描画されないから？
+確認
+console.log(gl.getParameter(gl.STENCIL_BITS)) // 0と出るのだが
+
+gl.ZERO	基準値を 0 にする
+gl.KEEP	現状の基準値を維持する
+gl.REPLACE	直前の stencilFunc メソッドで指定された ref の値を基準値として設定する
+gl.INCR	現在の基準値をインクリメント( +1 )する
+gl.DECR	現在の基準値をデクリメント( -1 )する
+gl.INVERT	現在の基準値をビット反転する
+gl.INCR_WRAP	現在の基準値をインクリメント( +1 )するが最大値を超えた場合には 0 に戻す
+gl.DECR_WRAP	現在の基準値をデクリメント( -1 )するが 0 を下回る場合には最大値に設定する
+
+
+
+＊レンダーバッファーへのフォーマットの設定
+基本形: gl.renderbufferStorage(gl.RENDERBUFFER, format, width, height);
+これらのオプションは本家だとかなりあるらしい。
+gl.RGBA4	RGBA それぞれに 4 ビットを割り当てカラーバッファとして利用する
+gl.RGB5_A1	RGB それぞれに 5 ビット、アルファ値として 1 ビットを割り当てるカラーフォーマットを利用する
+gl.RGB565	R 要素と B 要素に 5 ビットを割り当て、G 要素に 6 ビットを割り当てるカラーフォーマット
+gl.DEPTH_COMPONENT16	16 ビット深度を持つ深度バッファとして利用する
+gl.STENCIL_INDEX8	8 ビットのビット長を持つステンシルバッファとして利用する
+
+
+テクスチャ座標　＝　モデル変換したやつを射影変換
+そのあとtexture2DProjを用いて色を取る
+テクスチャ変換行列、ライドビュー行列、ライトプロジェクション行列を合わせて変換したのち、tex2DProj
