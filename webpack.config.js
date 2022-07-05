@@ -12,7 +12,7 @@ module.exports = {
         app: path.resolve(__dirname, 'src/app.ts'),
         page0: path.resolve(__dirname, 'src/page0.ts'),
         page1: path.resolve(__dirname, 'src/page1.ts'),
-        glsl: path.resolve(__dirname, 'src/glsl-renderer.ts')
+        glsl: path.resolve(__dirname, 'src/glsl-renderer.ts'),
     },
     // SPA(画面)が増えるたび追加
     // output: {},
@@ -22,30 +22,28 @@ module.exports = {
             {
                 // loaderの処理対象ファイル
                 test: /\.ts$/,
-                use: [{
-                    loader: 'ts-loader',
-                    options: {},
-                }],
-                exclude: /node_modules/
+                use: [
+                    {
+                        loader: 'ts-loader',
+                        options: {},
+                    },
+                ],
+                exclude: /node_modules/,
             },
             {
                 test: /\.(vert|frag)$/,
                 exclude: /node_modules/,
-                use: [
-                    'raw-loader',
-                    'glslify-loader'
-                ]
+                use: ['raw-loader', 'glslify-loader'],
             },
             {
                 test: /\.(jpg|png)$/,
-                loaders: 'url-loader'
-            }
-        ]
+                loaders: 'url-loader',
+            },
+        ],
     },
     resolve: {
         extensions: ['.ts', '.js'],
-        modules: [path.resolve(__dirname, 'src'),
-        path.resolve(__dirname, 'src/gl'), 'node_modules']
+        modules: [path.resolve(__dirname, 'src'), path.resolve(__dirname, 'src/gl'), 'node_modules'],
     },
 
     // webpack-dev-serverの設定
@@ -53,7 +51,5 @@ module.exports = {
         port: 8080,
         contentBase: path.join(__dirname, 'dist/'),
         historyApiFallback: true, // 404s willl fallback to index.html
-    }
+    },
 }
-
-

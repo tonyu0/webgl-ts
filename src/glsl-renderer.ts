@@ -1,4 +1,3 @@
-import * as lodash from 'lodash'
 import { gl, GLUtilities } from './gl/gl'
 import vert from '../shader/passthrough.vert'
 import frag from '../shader/hanabi.frag'
@@ -13,6 +12,12 @@ import {
 } from '../lib/shaderUtil'
 // 現状、onloadで出るべきところがべた書きになってり
 
+function mouseMove(e) {
+	const cw = canvas.width
+	const ch = canvas.height
+	mx = e.offsetX / cw
+	my = e.offsetY / ch
+}
 const canvas: HTMLCanvasElement = GLUtilities.initialize()
 canvas.addEventListener('mousemove', mouseMove, true)
 // setting
@@ -22,37 +27,22 @@ gl.enable(gl.DEPTH_TEST)
 gl.depthFunc(gl.LEQUAL)
 gl.enable(gl.STENCIL_TEST)
 // cULL: gl.CCW = face, DEPTH: gl.LEQUAL, STENCIL: WEBGLにstencil bufferを使うことを通知。コンテキスト生成時にstencilができている必要あり。
-// シェーダーの生成: 
+// シェーダーの生成:
 // TODO: vs, psを同じファイルにまとめてエントリーポイントで指定できないか？
 const vertShader = createShader(ShaderType.vertex, vert) as WebGLShader
 const fragShader = createShader(ShaderType.fragment, frag) as WebGLShader
 const program = createProgram(vertShader, fragShader) as WebGLProgram
 
-const attLocation: GLint[] = [
-	gl.getAttribLocation(program, 'position')
-]
+const attLocation: GLint[] = [gl.getAttribLocation(program, 'position')]
 const attStride: number[] = [3]
 
-let position = [
-	-1.0, 1.0, 0.0,
-	1.0, 1.0, 0.0,
-	-1.0, -1.0, 0.0,
-	1.0, -1.0, 0.0
-]
-let index = [
-	0, 2, 1,
-	1, 2, 3
-]
-let vbo: WebGLBuffer[] = [createVbo(position)]
-let ibo: WebGLBuffer = createIbo(index)
+const position = [-1.0, 1.0, 0.0, 1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 1.0, -1.0, 0.0]
+const index = [0, 2, 1, 1, 2, 3]
+const vbo: WebGLBuffer[] = [createVbo(position)]
+const ibo: WebGLBuffer = createIbo(index)
 setAttribute(vbo, attLocation, attStride, ibo)
 
-
-const uniformList = [
-	'time',
-	'mouse',
-	'resolution'
-]
+const uniformList = ['time', 'mouse', 'resolution']
 const uniformLocation: { [s: string]: WebGLUniformLocation } = {}
 
 uniformList.forEach((s) => {
@@ -65,15 +55,15 @@ console.log(gl.TEXTURE_2D, gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP_N
 
 let mx = 0.5
 let my = 0.5
-let startTime = new Date().getTime()
+const startTime = new Date().getTime()
 const range = document.getElementById('alpha') as HTMLInputElement
 const type = document.getElementsByName('blend')
 
 function drawScene(): any {
-	let time = (new Date().getTime() - startTime) * 0.001;
+	const time = (new Date().getTime() - startTime) * 0.001
 	// キャンバス初期化
 	{
-		gl.clearColor(0., 0., 0., 0.) // canvas初期化の色
+		gl.clearColor(0, 0, 0, 0) // canvas初期化の色
 		gl.clearDepth(1.0) // canvas初期化の深度
 		gl.clearStencil(0)
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT) // canvas初期化
@@ -89,10 +79,3 @@ function drawScene(): any {
 }
 
 drawScene()
-
-function mouseMove(e) {
-	const cw = canvas.width
-	const ch = canvas.height
-	mx = e.offsetX / cw
-	my = e.offsetY / ch
-}
